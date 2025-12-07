@@ -17,25 +17,6 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-
-    if (!token || !userData) {
-      router.push('/login');
-      return;
-    }
-
-    const parsedUser = JSON.parse(userData);
-    if (parsedUser.role !== 'admin') {
-      router.push('/login');
-      return;
-    }
-
-    setUser(parsedUser);
-    fetchData();
-  }, [router]);
-
   const fetchData = async () => {
     try {
       const [statsRes, ticketsRes] = await Promise.all([
@@ -63,6 +44,25 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+
+    if (!token || !userData) {
+      router.push('/login');
+      return;
+    }
+
+    const parsedUser = JSON.parse(userData);
+    if (parsedUser.role !== 'admin') {
+      router.push('/login');
+      return;
+    }
+
+    setUser(parsedUser);
+    fetchData();
+  }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
