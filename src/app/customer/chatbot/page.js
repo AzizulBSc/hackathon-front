@@ -3,6 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github-dark.css';
+import './chatbot-markdown.css';
 
 export default function ChatbotPage() {
   const router = useRouter();
@@ -11,7 +16,15 @@ export default function ChatbotPage() {
     {
       id: 1,
       sender: 'bot',
-      message: 'Hello! I\'m your SmartSupport AI assistant. How can I help you today?',
+      message: `👋 **Hello! I'm your SmartSupport AI assistant.**
+
+I can help you with:
+- Password resets and account issues
+- Billing and subscription questions  
+- Technical support and troubleshooting
+- General inquiries about our services
+
+Type your question below or choose from the quick questions! 🚀`,
       timestamp: new Date()
     }
   ]);
@@ -139,7 +152,95 @@ export default function ChatbotPage() {
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
                     }`}
                 >
-                  <p className="whitespace-pre-wrap">{msg.message}</p>
+                  {msg.sender === 'bot' ? (
+                    <div className="chatbot-markdown">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight]}
+                        components={{
+                          // Custom rendering for code blocks
+                          code: ({ node, inline, className, children, ...props }) => {
+                            const match = /language-(\w+)/.exec(className || '');
+                            return !inline ? (
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            ) : (
+                              <code className="bg-gray-700 dark:bg-gray-800 text-pink-400 px-1.5 py-0.5 rounded text-xs font-mono" {...props}>
+                                {children}
+                              </code>
+                            );
+                          },
+                          // Custom styling for pre (code blocks)
+                          pre: ({ node, children, ...props }) => (
+                            <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg my-3 overflow-x-auto font-mono text-sm" {...props}>
+                              {children}
+                            </pre>
+                          ),
+                          // Custom styling for links
+                          a: ({ node, ...props }) => (
+                            <a className="text-blue-400 hover:text-blue-300 underline font-medium" target="_blank" rel="noopener noreferrer" {...props} />
+                          ),
+                          // Custom styling for lists
+                          ul: ({ node, ...props }) => (
+                            <ul className="list-disc list-inside my-2 space-y-1" {...props} />
+                          ),
+                          ol: ({ node, ...props }) => (
+                            <ol className="list-decimal list-inside my-2 space-y-1" {...props} />
+                          ),
+                          li: ({ node, ...props }) => (
+                            <li className="ml-4" {...props} />
+                          ),
+                          // Custom styling for paragraphs
+                          p: ({ node, ...props }) => (
+                            <p className="mb-2 last:mb-0 leading-relaxed" {...props} />
+                          ),
+                          // Custom styling for headings
+                          h1: ({ node, ...props }) => (
+                            <h1 className="text-xl font-bold mt-4 mb-2 text-gray-900 dark:text-white" {...props} />
+                          ),
+                          h2: ({ node, ...props }) => (
+                            <h2 className="text-lg font-bold mt-3 mb-2 text-gray-900 dark:text-white" {...props} />
+                          ),
+                          h3: ({ node, ...props }) => (
+                            <h3 className="text-base font-bold mt-2 mb-1 text-gray-900 dark:text-white" {...props} />
+                          ),
+                          // Custom styling for blockquotes
+                          blockquote: ({ node, ...props }) => (
+                            <blockquote className="border-l-4 border-blue-500 pl-4 italic my-2 text-gray-700 dark:text-gray-300" {...props} />
+                          ),
+                          // Custom styling for tables
+                          table: ({ node, ...props }) => (
+                            <div className="overflow-x-auto my-3">
+                              <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600" {...props} />
+                            </div>
+                          ),
+                          th: ({ node, ...props }) => (
+                            <th className="border border-gray-300 dark:border-gray-600 bg-gray-200 dark:bg-gray-700 px-3 py-2 text-left font-semibold" {...props} />
+                          ),
+                          td: ({ node, ...props }) => (
+                            <td className="border border-gray-300 dark:border-gray-600 px-3 py-2" {...props} />
+                          ),
+                          // Custom styling for strong/bold
+                          strong: ({ node, ...props }) => (
+                            <strong className="font-bold text-gray-900 dark:text-white" {...props} />
+                          ),
+                          // Custom styling for emphasis/italic
+                          em: ({ node, ...props }) => (
+                            <em className="italic text-gray-800 dark:text-gray-200" {...props} />
+                          ),
+                          // Custom styling for horizontal rule
+                          hr: ({ node, ...props }) => (
+                            <hr className="my-4 border-gray-300 dark:border-gray-600" {...props} />
+                          ),
+                        }}
+                      >
+                        {msg.message}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{msg.message}</p>
+                  )}
                   <p className={`text-xs mt-2 ${msg.sender === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
                     {msg.timestamp.toLocaleTimeString()}
                   </p>
