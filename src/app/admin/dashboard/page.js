@@ -16,6 +16,7 @@ export default function AdminDashboard() {
   const [tickets, setTickets] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -45,7 +46,14 @@ export default function AdminDashboard() {
     }
   };
 
+  // Prevent hydration mismatch
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
 
@@ -62,7 +70,7 @@ export default function AdminDashboard() {
 
     setUser(parsedUser);
     fetchData();
-  }, [router]);
+  }, [router, mounted]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -99,15 +107,21 @@ export default function AdminDashboard() {
     });
   };
 
-  if (loading) {
+  // Show loading during hydration and data fetch
+  if (!mounted || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     );
+  }
+
+  // Prevent hydration mismatch
+  if (!user) {
+    return null;
   }
 
   return (

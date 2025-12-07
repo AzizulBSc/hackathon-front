@@ -17,9 +17,17 @@ export default function AgentDashboard() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterLoading, setFilterLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [filter, setFilter] = useState({ status: '', priority: '', search: '' });
 
+  // Prevent hydration mismatch
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
 
@@ -36,7 +44,7 @@ export default function AgentDashboard() {
 
     setUser(parsedUser);
     fetchData();
-  }, [router]);
+  }, [router, mounted]);
 
   const fetchData = async () => {
     try {
@@ -139,15 +147,21 @@ export default function AgentDashboard() {
     });
   };
 
-  if (loading) {
+  // Show loading during hydration and data fetch
+  if (!mounted || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     );
+  }
+
+  // Prevent hydration mismatch
+  if (!user) {
+    return null;
   }
 
   return (

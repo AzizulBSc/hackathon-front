@@ -10,13 +10,21 @@ export default function CustomerDashboard() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showNewTicket, setShowNewTicket] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [newTicket, setNewTicket] = useState({
     subject: '',
     description: '',
     priority: 'medium'
   });
 
+  // Prevent hydration mismatch
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     const userData = localStorage.getItem('user');
     if (!userData) {
       router.push('/login');
@@ -32,7 +40,7 @@ export default function CustomerDashboard() {
     }
 
     fetchTickets();
-  }, [router]);
+  }, [router, mounted]);
 
   const fetchTickets = async () => {
     try {
@@ -128,12 +136,21 @@ export default function CustomerDashboard() {
     return colors[priority] || colors.medium;
   };
 
-  if (loading) {
+  // Show loading during hydration and data fetch
+  if (!mounted || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
       </div>
     );
+  }
+
+  // Show nothing if user not loaded (prevents hydration mismatch)
+  if (!user) {
+    return null;
   }
 
   return (
