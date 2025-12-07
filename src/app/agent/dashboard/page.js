@@ -16,6 +16,7 @@ export default function AgentDashboard() {
   const [stats, setStats] = useState({});
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filterLoading, setFilterLoading] = useState(false);
   const [filter, setFilter] = useState({ status: '', priority: '', search: '' });
 
   useEffect(() => {
@@ -67,24 +68,41 @@ export default function AgentDashboard() {
 
   const fetchTickets = async () => {
     try {
+      setFilterLoading(true);
+
       const params = new URLSearchParams();
       if (filter.status) params.append('status', filter.status);
       if (filter.priority) params.append('priority', filter.priority);
       if (filter.search) params.append('search', filter.search);
 
       const response = await api.get(`/tickets?${params}`);
-      setTickets(Array.isArray(response.data?.data) ? response.data.data : []);
+
+      console.log('Filtered Tickets Response:', response);
+
+      // Handle Laravel pagination structure: data.data.data
+      const ticketsData = response.data?.data?.data || response.data?.data || response.data || [];
+
+      console.log('Parsed Filtered Tickets:', ticketsData);
+
+      setTickets(Array.isArray(ticketsData) ? ticketsData : []);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       setTickets([]);
+    } finally {
+      setFilterLoading(false);
     }
   };
 
+  // Debounced search effect
   useEffect(() => {
-    if (user) {
+    if (!user) return;
+
+    const timeoutId = setTimeout(() => {
       fetchTickets();
-    }
-  }, [filter]);
+    }, filter.search ? 500 : 0); // 500ms debounce for search, immediate for filters
+
+    return () => clearTimeout(timeoutId);
+  }, [filter, user]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -191,41 +209,105 @@ export default function AgentDashboard() {
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Ticket Queue</CardTitle>
-            <CardDescription>Manage and respond to customer tickets</CardDescription>
+            <CardDescription>
+              Manage and respond to customer tickets
+              {tickets.length > 0 && (
+                <span className="ml-2 text-blue-600 font-semibold">
+                  ({tickets.length} ticket{tickets.length !== 1 ? 's' : ''})
+                </span>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Input
-                placeholder="Search tickets..."
-                value={filter.search}
-                onChange={(e) => setFilter({ ...filter, search: e.target.value })}
-              />
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  placeholder="🔍 Search by subject or customer..."
+                  value={filter.search}
+                  onChange={(e) => setFilter({ ...filter, search: e.target.value })}
+                  className="w-full"
+                />
 
-              <Select value={filter.status || "all"} onValueChange={(value) => setFilter({ ...filter, status: value === "all" ? "" : value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select
+                  value={filter.status || "all"}
+                  onValueChange={(value) => setFilter({ ...filter, status: value === "all" ? "" : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="open">✅ Open</SelectItem>
+                    <SelectItem value="in_progress">⏳ In Progress</SelectItem>
+                    <SelectItem value="resolved">✔️ Resolved</SelectItem>
+                    <SelectItem value="closed">🔒 Closed</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              <Select value={filter.priority || "all"} onValueChange={(value) => setFilter({ ...filter, priority: value === "all" ? "" : value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select
+                  value={filter.priority || "all"}
+                  onValueChange={(value) => setFilter({ ...filter, priority: value === "all" ? "" : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priority</SelectItem>
+                    <SelectItem value="low">🟢 Low</SelectItem>
+                    <SelectItem value="medium">🔵 Medium</SelectItem>
+                    <SelectItem value="high">🟠 High</SelectItem>
+                    <SelectItem value="urgent">🔴 Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Active Filters Display & Reset */}
+              {(filter.status || filter.priority || filter.search) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm text-gray-600">Active filters:</span>
+                  {filter.search && (
+                    <Badge variant="secondary" className="gap-1">
+                      Search: "{filter.search}"
+                      <button
+                        onClick={() => setFilter({ ...filter, search: '' })}
+                        className="ml-1 hover:text-red-600"
+                      >
+                        ✕
+                      </button>
+                    </Badge>
+                  )}
+                  {filter.status && (
+                    <Badge variant="secondary" className="gap-1">
+                      Status: {filter.status}
+                      <button
+                        onClick={() => setFilter({ ...filter, status: '' })}
+                        className="ml-1 hover:text-red-600"
+                      >
+                        ✕
+                      </button>
+                    </Badge>
+                  )}
+                  {filter.priority && (
+                    <Badge variant="secondary" className="gap-1">
+                      Priority: {filter.priority}
+                      <button
+                        onClick={() => setFilter({ ...filter, priority: '' })}
+                        className="ml-1 hover:text-red-600"
+                      >
+                        ✕
+                      </button>
+                    </Badge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFilter({ status: '', priority: '', search: '' })}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    Clear all filters
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -233,6 +315,14 @@ export default function AgentDashboard() {
         {/* Tickets Table */}
         <Card>
           <CardContent className="p-0">
+            {filterLoading && (
+              <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-2 text-sm text-gray-600">Filtering...</p>
+                </div>
+              </div>
+            )}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -248,8 +338,22 @@ export default function AgentDashboard() {
               <TableBody>
                 {!Array.isArray(tickets) || tickets.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                      No tickets found
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <div className="text-gray-500">
+                        {filterLoading ? (
+                          <span>Loading tickets...</span>
+                        ) : (filter.status || filter.priority || filter.search) ? (
+                          <div>
+                            <p className="text-lg font-semibold">No tickets found</p>
+                            <p className="text-sm mt-1">Try adjusting your filters</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-lg font-semibold">No tickets available</p>
+                            <p className="text-sm mt-1">Tickets will appear here when assigned</p>
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
